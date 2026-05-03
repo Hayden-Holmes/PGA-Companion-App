@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="layout(pageTitle, content)">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="${pageTitle}">Golf App</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --green:        #1D9E75;
+            --green-light:  #E1F5EE;
+            --green-dark:   #0F6E56;
+            --gray-50:      #F1EFE8;
+            --gray-200:     #B4B2A9;
+            --gray-600:     #5F5E5A;
+            --gray-900:     #2C2C2A;
+            --border:       rgba(0,0,0,0.1);
+            --radius:       10px;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: var(--gray-50);
+            color: var(--gray-900);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        nav {
+            background: var(--green-dark);
+            color: #fff;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            padding: 0 2rem;
+            gap: 2rem;
+        }
+        .nav-brand {
+            display: flex; align-items: center; gap: 0.6rem;
+            text-decoration: none; color: #fff; font-size: 1.1rem;
+        }
+        .nav-links { display: flex; align-items: center; gap: 0.25rem; flex: 1; }
+        .nav-links a {
+            color: rgba(255,255,255,0.75); text-decoration: none;
+            font-size: 0.875rem; padding: 0.4rem 0.85rem; border-radius: 6px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .nav-links a:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        .nav-right { display: flex; align-items: center; gap: 1rem; margin-left: auto; }
+        .nav-user  { font-size: 0.85rem; color: rgba(255,255,255,0.75); }
+        .nav-logout {
+            font-size: 0.8rem; color: rgba(255,255,255,0.6); text-decoration: none;
+            border: 1px solid rgba(255,255,255,0.25); border-radius: 6px;
+            padding: 0.3rem 0.75rem; transition: all 0.15s;
+        }
+        .nav-logout:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+        main { flex: 1; }
+
+        .flash-global {
+            background: var(--green-light); color: var(--green-dark);
+            border-bottom: 1px solid #9FE1CB;
+            padding: 0.65rem 2rem; font-size: 0.875rem; text-align: center;
+        }
+        .flash-global.error {
+            background: #FCEBEB; color: #A32D2D; border-bottom-color: #F7C1C1;
+        }
+
+        footer {
+            background: var(--green-dark); color: rgba(255,255,255,0.55);
+            padding: 1.25rem 2rem; font-size: 0.8rem;
+            display: flex; align-items: center; justify-content: center;
+            gap: 1.5rem; flex-wrap: wrap;
+        }
+        footer a { color: rgba(255,255,255,0.55); text-decoration: none; }
+        footer a:hover { color: #fff; }
+
+        .page-container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+        .panel { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+        .panel-header {
+            padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .panel-header h2 { font-size: 1rem; font-weight: 600; }
+        .panel-body { padding: 1.25rem; }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            border-radius: 7px; padding: 0.5rem 1.1rem;
+            font-size: 0.875rem; font-family: inherit; cursor: pointer;
+            transition: background 0.15s; text-decoration: none; border: none;
+        }
+        .btn-primary  { background: var(--green); color: #fff; }
+        .btn-primary:hover { background: var(--green-dark); }
+        .btn-ghost    { background: none; border: 1px solid var(--border); color: var(--gray-600); }
+        .btn-ghost:hover { background: var(--gray-50); }
+        .btn-danger   { background: none; border: 1px solid #F7C1C1; color: #A32D2D; }
+        .btn-danger:hover { background: #FCEBEB; }
+        .btn-success  { background: none; border: 1px solid #9FE1CB; color: var(--green-dark); }
+        .btn-success:hover { background: var(--green-light); }
+
+        input[type="text"], input[type="number"], input[type="email"],
+        input[type="password"], select, textarea {
+            border: 1px solid var(--border); border-radius: 7px;
+            padding: 0.5rem 0.75rem; font-size: 0.9rem; font-family: inherit;
+            background: var(--gray-50); color: var(--gray-900);
+            outline: none; transition: border-color 0.15s; width: 100%;
+        }
+        input:focus, select:focus, textarea:focus { border-color: var(--green); }
+
+        .empty-state {
+            text-align: center; padding: 2rem 1rem;
+            color: var(--gray-200); font-size: 0.9rem;
+        }
+
+        @media (max-width: 600px) {
+            nav { padding: 0 1rem; gap: 1rem; }
+            .nav-user { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a class="nav-brand" th:href="@{/dashboard}">&#9971; Golf App</a>
+        <div class="nav-links">
+            <a th:href="@{/dashboard}">Dashboard</a>
+            <a th:href="@{/course-fit}">Course Fit</a>
+        </div>
+        <div class="nav-right">
+            <span class="nav-user"
+                  th:if="${#authentication != null}"
+                  th:text="${#authentication.name}"></span>
+            <a class="nav-logout" th:href="@{/logout}">Sign out</a>
+        </div>
+    </nav>
+
+    <div class="flash-global"
+         th:if="${successMessage}"
+         th:text="${successMessage}"></div>
+    <div class="flash-global error"
+         th:if="${errorMessage}"
+         th:text="${errorMessage}"></div>
+
+    <main class="page-container">
+        <div th:replace="${content}"></div>
+    </main>
+
+    <footer>
+        <span>&#169; 2025 Golf App</span>
+        <a th:href="@{/dashboard}">Dashboard</a>
+    </footer>
+
+</body>
+</html>

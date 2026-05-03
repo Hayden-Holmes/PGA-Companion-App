@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{base :: layout('Dashboard - Golf App', ~{::content})}">
+
+<th:block th:fragment="content">
+<style>
+    .page { display: grid; grid-template-columns: 1fr 1.4fr; gap: 2rem; }
+    @media (max-width: 820px) { .page { grid-template-columns: 1fr; } }
+
+    /* Watchlist cards */
+    .watchlist-cards { display: flex; flex-direction: column; gap: 0.75rem; }
+    .player-card {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.875rem 1rem;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.5rem 1rem;
+        align-items: start;
+    }
+    .player-card-top { display: flex; align-items: center; gap: 0.5rem; }
+    .player-card-name { font-weight: 600; font-size: 0.9375rem; }
+    .player-card-country { font-size: 0.75rem; color: var(--gray-600); }
+    .player-card-actions { display: flex; gap: 0.5rem; align-items: center; }
+
+    .trend-up   { color: #1D9E75; font-size: 1rem; }
+    .trend-down { color: #A32D2D; font-size: 1rem; }
+    .trend-flat { color: var(--gray-200); font-size: 1rem; }
+
+    .last-result {
+        font-size: 0.78rem;
+        color: var(--gray-600);
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .score-pill {
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 20px;
+        background: var(--green-light);
+        color: var(--green-dark);
+    }
+    .score-pill.over  { background: #FCEBEB; color: #A32D2D; }
+    .score-pill.even  { background: var(--gray-50); color: var(--gray-600); }
+
+    /* Search results */
+    .search-form { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .search-form input[type="text"] { flex: 1; min-width: 160px; }
+    .results-meta { font-size: 0.8rem; color: var(--gray-600); margin-bottom: 0.75rem; }
+    .result-list { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; }
+    .result-row {
+        display: flex; align-items: center; gap: 0.75rem;
+        padding: 0.5rem 0.75rem; border-radius: 8px; transition: background 0.15s;
+    }
+    .result-row:hover { background: var(--gray-50); }
+    .result-name    { flex: 1; font-size: 0.9rem; }
+    .result-country { font-size: 0.78rem; color: var(--gray-600); }
+    .watching-label { font-size: 0.78rem; color: var(--green); padding: 3px 8px; }
+
+    .filter-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .tab {
+        font-size: 0.8rem; padding: 4px 12px; border-radius: 20px;
+        border: 1px solid var(--border); background: none; cursor: pointer;
+        color: var(--gray-600); font-family: inherit; transition: all 0.15s;
+    }
+    .tab.active { background: var(--green); color: #fff; border-color: var(--green); }
+    .tab.soon   { opacity: 0.45; cursor: default; }
+</style>
+
+<div class="page">
+
+    <!-- LEFT: Watchlist -->
+    <section>
+        <div class="panel">
+            <div class="panel-header">
+                <h2>My Watchlist</h2>
+                <span style="font-size:0.8rem; color:var(--gray-600);"
+                      th:text="${watchlistSummaries.size()} + ' players'"></span>
+            </div>
+            <div class="panel-body">
+                <div class="watchlist-cards" th:if="${not #lists.isEmpty(watchlistSummaries)}">
+                    <div class="player-card" th:each="s : ${watchlistSummaries}">
+
+                        <div class="player-card-top">
+                            <!-- Trend arrow -->
+                            <span th:if="${s.trend.name() == 'UP'}"   class="trend-up">&#8593;</span>
+                            <span th:if="${s.trend.name() == 'DOWN'}" class="trend-down">&#8595;</span>
+                            <span th:if="${s.trend.name() == 'FLAT'}" class="trend-flat">&#8212;</span>
+
+                            <a th:href="@{/players/{id}(id=${s.playerId})}" class="player-card-name"
+                               th:text="${s.playerName}"></a>
+                            <span class="player-card-country" th:text="${s.country}"></span>
+                        </div>
+
+                        <div class="player-card-actions">
+                            <a th:href="@{/players/{id}(id=${s.playerId})}"
+                               class="btn btn-ghost" style="padding:3px 10px; font-size:0.78rem;">View</a>
+                            <form th:action="@{/dashboard/watchlist/remove/{id}(id=${s.playerId})}"
+                                  method="post" style="margin:0;">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                <button class="btn btn-danger" type="submit"
+                                        style="padding:3px 10px; font-size:0.78rem;">Remove</button>
+                            </form>
+                        </div>
+
+                        <div class="last-result">
+                            <span th:text="${s.lastTournamentName}"></span>
+                            <span class="score-pill"
+                                  th:classappend="${s.lastScoreDisplay.startsWith('+') ? 'over' : (s.lastScoreDisplay == 'E' ? 'even' : '')}"
+                                  th:text="${s.lastScoreDisplay}"></span>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="empty-state" th:if="${#lists.isEmpty(watchlistSummaries)}">
+                    No players on your watchlist yet.<br/>Search and add some on the right.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- RIGHT: Search & Add -->
+    <section>
+        <div class="panel">
+            <div class="panel-header"><h2>Find Players</h2></div>
+            <div class="panel-body">
+
+                <div class="filter-tabs">
+                    <button class="tab active">Search</button>
+                    <button class="tab soon" disabled>Trending &#8593;</button>
+                    <button class="tab soon" disabled>By Tour</button>
+                    <button class="tab soon" disabled>By Country</button>
+                </div>
+
+                <form class="search-form" th:action="@{/dashboard/search}" method="get">
+                    <input type="text" name="name" placeholder="Player name…" th:value="${searchName}"/>
+                    <button class="btn btn-primary" type="submit">Search</button>
+                    <a th:href="@{/dashboard}">
+                        <button class="btn btn-ghost" type="button">Clear</button>
+                    </a>
+                </form>
+
+                <div th:if="${results != null}" style="margin-top:1.5rem;">
+                    <p class="results-meta"
+                       th:text="${results.size()} + ' result' + (${results.size()} != 1 ? 's' : '')"></p>
+
+                    <ul class="result-list" th:if="${not #lists.isEmpty(results)}">
+                        <li class="result-row" th:each="player : ${results}">
+                            <a th:href="@{/players/{id}(id=${player.playerId})}"
+                               class="result-name" th:text="${player.playerName}"></a>
+                            <span class="result-country" th:text="${player.country}"></span>
+
+                            <span class="watching-label"
+                                  th:if="${watchlist.contains(player)}">&#10003; Watching</span>
+
+                            <form th:unless="${watchlist.contains(player)}"
+                                  th:action="@{/dashboard/watchlist/add/{id}(id=${player.playerId})}"
+                                  method="post" style="margin:0;">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                <input type="hidden" name="redirectTo"
+                                       th:value="@{/dashboard/search(name=${searchName})}"/>
+                                <button class="btn btn-success" type="submit"
+                                        style="padding:3px 10px; font-size:0.78rem;">+ Add</button>
+                            </form>
+                        </li>
+                    </ul>
+
+                    <div class="empty-state" th:if="${#lists.isEmpty(results)}">
+                        No players match your search.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+</div>
+</th:block>
+</html>

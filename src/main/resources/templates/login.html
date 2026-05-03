@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{base :: layout('Sign In - Golf App', ~{::content})}">
+
+<th:block th:fragment="content">
+    <style>
+        .auth-card {
+            max-width: 400px;
+            margin: 0 auto;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+        }
+        .auth-card h1 { font-size: 1.4rem; margin-bottom: 0.25rem; color: var(--green-dark); }
+        .auth-card p  { font-size: 0.875rem; color: var(--gray-600); margin-bottom: 1.5rem; }
+        .field { margin-bottom: 1rem; }
+        .field label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; color: var(--gray-900); }
+        .auth-footer { margin-top: 1rem; font-size: 0.85rem; color: var(--gray-600); text-align: center; }
+        .auth-footer a { color: var(--green-dark); }
+    </style>
+
+    <div class="auth-card">
+        <h1>Sign in</h1>
+        <p>Welcome back to Golf Picks</p>
+
+        <div th:if="${errorMessage}"   class="flash-global error"   th:text="${errorMessage}"   style="border-radius:7px; margin-bottom:1rem;"></div>
+        <div th:if="${successMessage}" class="flash-global"         th:text="${successMessage}" style="border-radius:7px; margin-bottom:1rem;"></div>
+
+        <form th:action="@{/login}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <div class="field">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="devuser" required autofocus/>
+            </div>
+            <div class="field">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="••••••••" required/>
+            </div>
+            <button class="btn btn-primary" type="submit" style="width:100%; justify-content:center;">Sign in</button>
+        </form>
+
+        <p class="auth-footer">
+            No account? <a th:href="@{/register}">Create one</a>
+        </p>
+    </div>
+</th:block>
+
+</html>

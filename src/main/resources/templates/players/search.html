@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Player Search</title>
+</head>
+<body>
+
+<h1>Player Search</h1>
+
+<form method="get" action="/players/search">
+    <input type="text" name="q" th:value="${query}" placeholder="Search players..." />
+    <button type="submit">Search</button>
+</form>
+
+<div th:if="${results != null and !results.isEmpty()}">
+    <p th:text="'Found ' + ${results.size()} + ' players'"></p>
+    <ul>
+        <li th:each="player : ${results}">
+            <span th:text="${player.playerName}"></span>
+            <span th:text="' (' + ${player.country} + ')'"></span>
+        </li>
+    </ul>
+</div>
+
+<div th:if="${query != '' and (results == null or results.isEmpty())}">
+    <p>No players found for "<span th:text="${query}"></span>"</p>
+</div>
+
+</body>
+</html>

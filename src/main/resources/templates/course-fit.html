@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{base :: layout('Course Fit - Golf App', ~{::content})}">
+
+<th:block th:fragment="content">
+<style>
+    /* ── Course picker ──────────────────────────────────────────────────── */
+    .picker-form { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .picker-form label { font-size: 0.8rem; color: var(--gray-600); display: block; margin-bottom: 0.3rem; }
+    .picker-form select { min-width: 280px; }
+
+    /* ── Course info bar ─────────────────────────────────────────────── */
+    .course-bar {
+        background: var(--green-dark); color: #fff;
+        border-radius: 10px; padding: 1rem 1.25rem;
+        display: flex; gap: 2rem; flex-wrap: wrap; align-items: center;
+        margin-bottom: 1rem;
+    }
+    .course-bar-name  { font-size: 1.1rem; font-weight: 700; flex: 1; min-width: 180px; }
+    .course-bar-stat  { text-align: center; }
+    .course-bar-label { font-size: 0.68rem; opacity: 0.65; text-transform: uppercase; letter-spacing: 0.06em; }
+    .course-bar-value { font-size: 1rem; font-weight: 700; }
+    .weight-pill {
+        font-size: 0.72rem; padding: 3px 9px; border-radius: 20px;
+        background: rgba(255,255,255,0.15); color: #fff; white-space: nowrap;
+    }
+
+    /* ── Algorithm badge bar ─────────────────────────────────────────── */
+    .algo-bar {
+        border-radius: 8px; padding: 0.6rem 1rem;
+        display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;
+        font-size: 0.8rem; margin-bottom: 1.5rem;
+        border: 1px solid var(--border);
+        background: var(--gray-50);
+    }
+    .algo-badge {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+    }
+    .algo-badge.ml     { background: #E8F4FD; color: #1565C0; }
+    .algo-badge.pearson{ background: #EDF7E1; color: #3A6E0F; }
+    .algo-badge.heur   { background: #FFF8E1; color: #7a5800; }
+
+    .conf-high   { color: #0F6E56; font-weight: 700; }
+    .conf-medium { color: #7a5800; font-weight: 700; }
+    .conf-low    { color: #A32D2D; font-weight: 700; }
+
+    /* ── Fit table ──────────────────────────────────────────────────────── */
+    .fit-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .fit-table th {
+        background: var(--gray-50); color: var(--gray-600);
+        font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em;
+        padding: 8px 10px; text-align: left; white-space: nowrap;
+    }
+    .fit-table td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .fit-table tr:last-child td { border-bottom: none; }
+    .fit-table tr:hover td { background: #fafaf8; }
+
+    /* Rank badge */
+    .rank-badge {
+        width: 26px; height: 26px; border-radius: 50%;
+        background: var(--green-light); color: var(--green-dark);
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 0.78rem; font-weight: 700;
+    }
+    .rank-badge.rank-1 { background: #FFD700; color: #7a5800; }
+    .rank-badge.rank-2 { background: #E8E8E8; color: #444; }
+    .rank-badge.rank-3 { background: #E8B57B; color: #7a3800; }
+
+    /* Grade badge */
+    .grade-badge {
+        display: inline-block; padding: 3px 10px; border-radius: 6px;
+        font-size: 0.8rem; font-weight: 700; min-width: 36px; text-align: center;
+    }
+    .grade-a  { background: #E1F5EE; color: #0F6E56; }
+    .grade-b  { background: #EDF7E1; color: #3A6E0F; }
+    .grade-c  { background: #FFF8E1; color: #7a5800; }
+    .grade-d  { background: #FCEBEB; color: #A32D2D; }
+
+    /* Fit score bar */
+    .score-bar-wrap { width: 80px; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+    .score-bar-fill { height: 100%; border-radius: 4px; background: var(--green); transition: width 0.4s; }
+
+    /* SG cell */
+    .sg-pos { color: var(--green-dark); font-weight: 600; }
+    .sg-neg { color: #A32D2D; font-weight: 600; }
+
+    /* History pills */
+    .hist-pills { display: flex; gap: 3px; }
+    .hist-pill {
+        min-width: 28px; height: 22px; font-size: 0.7rem; font-weight: 600;
+        border-radius: 5px; display: inline-flex; align-items: center;
+        justify-content: center; padding: 0 3px;
+    }
+    .hist-pill.under { background: var(--green-light); color: var(--green-dark); }
+    .hist-pill.over  { background: #FCEBEB; color: #A32D2D; }
+    .hist-pill.even  { background: var(--gray-50); color: var(--gray-600); }
+
+    .table-wrap { overflow-x: auto; }
+    .empty-state { text-align: center; padding: 2rem 1rem; color: var(--gray-200); font-size: 0.9rem; }
+</style>
+
+<!-- Page header -->
+<div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+    <h1 style="font-size:1.4rem;">Course Fit</h1>
+    <span style="font-size:0.85rem; color:var(--gray-600);">
+        How your watchlist players stack up at a specific course
+    </span>
+</div>
+
+<!-- Course picker -->
+<div class="panel" style="margin-bottom:1.5rem;">
+    <div class="panel-body">
+        <form class="picker-form" method="get" action="/course-fit">
+            <div>
+                <label for="courseSelect">Select a course</label>
+                <select id="courseSelect" name="courseId" onchange="this.form.submit()">
+                    <option value="">— Pick a course —</option>
+                    <option th:each="c : ${courses}"
+                            th:value="${c.courseId}"
+                            th:text="${c.courseName + (c.location != null ? ' (' + c.location + ')' : '')}"
+                            th:selected="${c.courseId == selectedCourseId}">
+                    </option>
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Results (only when a course is selected) -->
+<div th:if="${selectedCourse != null}">
+
+    <!-- Course info bar -->
+    <div class="course-bar">
+        <div class="course-bar-name">
+            <div th:text="${selectedCourse.courseName}"></div>
+            <div style="font-size:0.78rem; opacity:0.65;" th:text="${selectedCourse.location}"></div>
+        </div>
+        <div class="course-bar-stat">
+            <div class="course-bar-label">Par</div>
+            <div class="course-bar-value" th:text="${selectedCourse.par ?: '—'}"></div>
+        </div>
+        <div class="course-bar-stat">
+            <div class="course-bar-label">Yardage</div>
+            <div class="course-bar-value"
+                 th:text="${selectedCourse.yardage != null ? #numbers.formatInteger(selectedCourse.yardage, 1, 'COMMA') + ' yds' : '—'}"></div>
+        </div>
+        <div class="course-bar-stat">
+            <div class="course-bar-label">Course Type</div>
+            <div class="course-bar-value"
+                 th:text="${selectedCourse.yardage == null ? 'Unknown' :
+                            selectedCourse.yardage >= 7300 ? 'Long' :
+                            selectedCourse.yardage >= 6900 ? 'Balanced' : 'Short'}"></div>
+        </div>
+        <!-- Dynamic weight pills from the resolved algorithm -->
+        <div th:if="${fitResult != null}" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+            <span class="weight-pill" th:text="'OTT ' + ${fitResult.weightOttPct}"></span>
+            <span class="weight-pill" th:text="'App ' + ${fitResult.weightAppPct}"></span>
+            <span class="weight-pill" th:text="'ARG ' + ${fitResult.weightArgPct}"></span>
+            <span class="weight-pill" th:text="'Putt ' + ${fitResult.weightPuttPct}"></span>
+        </div>
+    </div>
+
+    <!-- Algorithm info bar -->
+    <div class="algo-bar" th:if="${fitResult != null}">
+        <!-- Algorithm badge -->
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+            <span th:if="${fitResult.MLPowered}"
+                  class="algo-badge ml">&#x1F916; ML · Ridge Regression</span>
+            <span th:if="${!fitResult.MLPowered and fitResult.algorithmUsed == 'pearson'}"
+                  class="algo-badge pearson">&#x1F4CA; Pearson Correlation</span>
+            <span th:if="${fitResult.algorithmUsed == 'heuristic'}"
+                  class="algo-badge heur">&#x2696; Heuristic · Yardage-Based</span>
+        </div>
+
+        <!-- Data points -->
+        <div style="color:var(--gray-600);">
+            <span style="font-weight:600;" th:text="${fitResult.dataPoints}"></span>
+            historical observations
+        </div>
+
+        <!-- R² (only for Ridge / Pearson) -->
+        <div th:if="${fitResult.rSquared != null}" style="color:var(--gray-600);">
+            R² = <span style="font-weight:600;"
+                       th:classappend="${fitResult.confidenceClass}"
+                       th:text="${fitResult.rSquaredDisplay}"></span>
+        </div>
+
+        <!-- Confidence -->
+        <div style="color:var(--gray-600);" th:if="${fitResult.modelConfidence != null}">
+            Confidence:
+            <span th:classappend="${fitResult.confidenceClass}"
+                  th:text="${#strings.capitalize(fitResult.modelConfidence)}"></span>
+        </div>
+
+        <!-- Decay note (Ridge only) -->
+        <div th:if="${fitResult.MLPowered}"
+             style="color:var(--gray-600); font-style:italic;">
+            2-yr exponential time decay applied
+        </div>
+    </div>
+
+    <!-- Fit table -->
+    <div class="panel" th:if="${not #lists.isEmpty(fitEntries)}">
+        <div class="panel-header">
+            <h2>Watchlist — Ranked by Course Fit</h2>
+            <span style="font-size:0.78rem; color:var(--gray-600);">Based on weighted SG stats + course history</span>
+        </div>
+        <div class="panel-body" style="padding:0;">
+            <div class="table-wrap">
+                <table class="fit-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Player</th>
+                            <th>Grade</th>
+                            <th>Fit Score</th>
+                            <th>SG OTT</th>
+                            <th>SG App</th>
+                            <th>SG ARG</th>
+                            <th>SG Putt</th>
+                            <th>SG Total</th>
+                            <th>Course History</th>
+                            <th>Summary</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="entry, iter : ${fitEntries}">
+
+                            <td>
+                                <span class="rank-badge"
+                                      th:classappend="${iter.index == 0 ? ' rank-1' : iter.index == 1 ? ' rank-2' : iter.index == 2 ? ' rank-3' : ''}"
+                                      th:text="${iter.index + 1}"></span>
+                            </td>
+
+                            <td>
+                                <a th:href="@{/players/{id}(id=${entry.playerId})}"
+                                   style="font-weight:600; color:var(--gray-900); text-decoration:none;"
+                                   th:text="${entry.playerName}"></a>
+                                <div style="font-size:0.72rem; color:var(--gray-600);" th:text="${entry.country}"></div>
+                            </td>
+
+                            <td>
+                                <span class="grade-badge"
+                                      th:classappend="${entry.fitGradeClass}"
+                                      th:text="${entry.fitGrade}"></span>
+                            </td>
+
+                            <td>
+                                <div style="display:flex; align-items:center; gap:0.5rem;">
+                                    <div class="score-bar-wrap">
+                                        <div class="score-bar-fill"
+                                             th:style="'width:' + ${entry.fitScore * 10} + '%'"></div>
+                                    </div>
+                                    <span style="font-size:0.85rem; font-weight:700;"
+                                          th:text="${entry.fitScoreDisplay}"></span>
+                                </div>
+                            </td>
+
+                            <td th:classappend="${entry.avgSgOtt != null and entry.avgSgOtt.doubleValue() >= 0 ? 'sg-pos' : 'sg-neg'}"
+                                th:text="${entry.avgSgOtt != null ? (entry.avgSgOtt.doubleValue() >= 0 ? '+' : '') + #numbers.formatDecimal(entry.avgSgOtt, 1, 2) : '—'}"></td>
+                            <td th:classappend="${entry.avgSgApp != null and entry.avgSgApp.doubleValue() >= 0 ? 'sg-pos' : 'sg-neg'}"
+                                th:text="${entry.avgSgApp != null ? (entry.avgSgApp.doubleValue() >= 0 ? '+' : '') + #numbers.formatDecimal(entry.avgSgApp, 1, 2) : '—'}"></td>
+                            <td th:classappend="${entry.avgSgArg != null and entry.avgSgArg.doubleValue() >= 0 ? 'sg-pos' : 'sg-neg'}"
+                                th:text="${entry.avgSgArg != null ? (entry.avgSgArg.doubleValue() >= 0 ? '+' : '') + #numbers.formatDecimal(entry.avgSgArg, 1, 2) : '—'}"></td>
+                            <td th:classappend="${entry.avgSgPutt != null and entry.avgSgPutt.doubleValue() >= 0 ? 'sg-pos' : 'sg-neg'}"
+                                th:text="${entry.avgSgPutt != null ? (entry.avgSgPutt.doubleValue() >= 0 ? '+' : '') + #numbers.formatDecimal(entry.avgSgPutt, 1, 2) : '—'}"></td>
+                            <td th:classappend="${entry.avgSgTotal != null and entry.avgSgTotal.doubleValue() >= 0 ? 'sg-pos' : 'sg-neg'}"
+                                th:text="${entry.avgSgTotal != null ? (entry.avgSgTotal.doubleValue() >= 0 ? '+' : '') + #numbers.formatDecimal(entry.avgSgTotal, 1, 2) : '—'}"></td>
+
+                            <td>
+                                <div th:if="${entry.courseAppearances == 0}" style="color:var(--gray-200);">No history</div>
+                                <div th:if="${entry.courseAppearances > 0}">
+                                    <div style="font-size:0.75rem; color:var(--gray-600); margin-bottom:0.25rem;"
+                                         th:text="${entry.courseAppearances + ' event' + (entry.courseAppearances > 1 ? 's' : '') + (entry.bestFinish != null ? ' · Best: T' + entry.bestFinish : '')}"></div>
+                                    <div style="font-size:0.82rem; font-weight:700;"
+                                         th:classappend="${entry.avgScoreVsPar != null and entry.avgScoreVsPar < 0 ? 'sg-pos' : 'sg-neg'}"
+                                         th:text="'Avg: ' + ${entry.avgScoreVsParDisplay}"></div>
+                                    <div class="hist-pills" style="margin-top:4px;"
+                                         th:if="${entry.courseScoreHistory != null and not #lists.isEmpty(entry.courseScoreHistory)}">
+                                        <span th:each="vp : ${entry.courseScoreHistory}"
+                                              class="hist-pill"
+                                              th:classappend="${vp < 0 ? 'under' : vp > 0 ? 'over' : 'even'}"
+                                              th:text="${vp == 0 ? 'E' : (vp > 0 ? '+' : '') + vp}"></span>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td style="font-size:0.78rem; color:var(--gray-600); max-width:200px;"
+                                th:text="${entry.fitSummary}"></td>
+
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" th:if="${#lists.isEmpty(fitEntries)}">
+        <div class="panel-body">
+            <div class="empty-state">
+                Your watchlist is empty — add players from the
+                <a th:href="@{/dashboard}" style="color:var(--green-dark);">Dashboard</a>
+                to see their course fit.
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- How it works card -->
+<div class="panel" style="margin-top:1.5rem;">
+    <div class="panel-header"><h2>How Course Fit Works</h2></div>
+    <div class="panel-body" style="font-size:0.85rem; color:var(--gray-600); line-height:1.7;">
+        <p style="margin-bottom:0.75rem;">
+            When sufficient historical data exists at a course, weights are computed by a
+            <strong style="color:var(--gray-900);">Python Ridge Regression engine</strong>
+            with <strong style="color:var(--gray-900);">exponential time decay</strong>.
+            Each past player-tournament observation is down-weighted by a 2-year half-life
+            so that recent course editions matter more than old ones.  The model learns which
+            SG component (off-the-tee, approach, around-the-green, putting) historically
+            predicts lower finish positions at that specific venue.
+        </p>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:0.75rem; margin-bottom:0.75rem;">
+            <div style="background:var(--gray-50); border-radius:8px; padding:0.75rem;">
+                <strong style="color:#1565C0;">&#x1F916; ML · Ridge Regression</strong><br/>
+                Weighted Ridge regression on top-finisher SG data.
+                Exponential decay emphasises recent tournaments.
+                R² reported as model confidence.
+            </div>
+            <div style="background:var(--gray-50); border-radius:8px; padding:0.75rem;">
+                <strong style="color:#3A6E0F;">&#x1F4CA; Pearson Correlation</strong><br/>
+                Bivariate correlation between each SG stat and finish
+                position, used when Python engine is unavailable.
+            </div>
+            <div style="background:var(--gray-50); border-radius:8px; padding:0.75rem;">
+                <strong style="color:#7a5800;">&#x2696; Heuristic</strong><br/>
+                Yardage-based tier weights (Long / Balanced / Short)
+                when fewer than 12 historical observations exist.
+            </div>
+        </div>
+        <p>A history bonus of up to ±1.5 points is always applied for past performance at the exact course.</p>
+    </div>
+</div>
+
+</th:block>
+</html>

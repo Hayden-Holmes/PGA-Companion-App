@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{base :: layout(${player.playerName} + ' - Golf App', ~{::content})}">
+
+<th:block th:fragment="content">
+<style>
+    .player-header {
+        display: flex; align-items: center; gap: 1.25rem;
+        margin-bottom: 1.5rem; flex-wrap: wrap;
+    }
+    .player-avatar {
+        width: 56px; height: 56px; border-radius: 50%;
+        background: var(--green-light);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.4rem; font-weight: 700; color: var(--green-dark);
+        flex-shrink: 0;
+    }
+    .player-title h1 { font-size: 1.5rem; margin-bottom: 0.15rem; }
+    .player-title span { font-size: 0.875rem; color: var(--gray-600); }
+    .back-link { font-size: 0.85rem; color: var(--green-dark); text-decoration: none; margin-left: auto; }
+    .back-link:hover { text-decoration: underline; }
+
+    .tab-nav { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem; }
+    .tab-btn {
+        padding: 0.6rem 1.1rem; font-size: 0.875rem; font-family: inherit;
+        background: none; border: none; border-bottom: 2px solid transparent;
+        margin-bottom: -2px; cursor: pointer; color: var(--gray-600); transition: all 0.15s;
+    }
+    .tab-btn.active { color: var(--green-dark); border-bottom-color: var(--green); font-weight: 600; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .results-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .results-table th {
+        background: var(--gray-50); color: var(--gray-600); font-size: 0.72rem;
+        text-transform: uppercase; letter-spacing: 0.04em;
+        padding: 8px 10px; text-align: left; white-space: nowrap;
+    }
+    .results-table td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .results-table tr:last-child td { border-bottom: none; }
+    .results-table tr:hover td { background: #fafaf8; }
+
+    /* Position badge */
+    .pos-badge {
+        display: inline-block; padding: 3px 8px; border-radius: 6px;
+        font-size: 0.78rem; font-weight: 700;
+        background: var(--green-light); color: var(--green-dark);
+    }
+    .pos-badge.cut { background: #fff4e5; color: #92400e; }
+    .pos-badge.wd  { background: var(--gray-50); color: var(--gray-600); }
+    .pos-badge.top10 { background: var(--green); color: #fff; }
+
+    /* Score vs par */
+    .score-under { color: var(--green-dark); font-weight: 700; }
+    .score-over  { color: #A32D2D; font-weight: 700; }
+    .score-even  { color: var(--gray-600); font-weight: 700; }
+
+    /* Per-round score pills */
+    .round-scores { display: flex; gap: 4px; }
+    .round-pip {
+        min-width: 32px; height: 28px; border-radius: 6px; font-size: 0.75rem;
+        font-weight: 600; display: flex; align-items: center; justify-content: center;
+        background: var(--gray-50); color: var(--gray-900); padding: 0 4px;
+    }
+    .round-pip.under { background: var(--green-light); color: var(--green-dark); }
+    .round-pip.over  { background: #FCEBEB; color: #A32D2D; }
+    .round-pip.even  { background: var(--gray-50); color: var(--gray-600); }
+
+    /* Season stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; }
+    .stat-card { background: var(--gray-50); border: 1px solid var(--border); border-radius: 10px; padding: 0.875rem 1rem; }
+    .stat-title { font-size: 0.75rem; color: var(--gray-600); margin-bottom: 0.3rem; }
+    .stat-value { font-size: 1.25rem; font-weight: 700; color: var(--green-dark); }
+    .stat-meta  { font-size: 0.72rem; color: var(--gray-400); margin-top: 0.2rem; display: flex; gap: 0.75rem; }
+
+    .empty-state { text-align:center; padding:2rem 1rem; color:var(--gray-200); font-size:0.9rem; }
+    .table-wrap { overflow-x: auto; }
+</style>
+
+<div class="player-header">
+    <div class="player-avatar"
+         th:text="${#strings.toUpperCase(#strings.substring(player.playerName, 0, 2))}"></div>
+    <div class="player-title">
+        <h1 th:text="${player.playerName}"></h1>
+        <span th:text="${player.country}"></span>
+    </div>
+    <a class="back-link" th:href="@{/dashboard}">&#8592; Dashboard</a>
+</div>
+
+<div class="tab-nav">
+    <button class="tab-btn active" onclick="showTab('results', this)">Recent Results</button>
+    <button class="tab-btn"        onclick="showTab('trend',   this)">Form &amp; Trend</button>
+    <button class="tab-btn"        onclick="showTab('stats',   this)">Season Stats</button>
+</div>
+
+<!-- Tab: Recent Tournament Results -->
+<div id="tab-results" class="tab-panel active">
+    <div th:if="${not #lists.isEmpty(tournamentResults)}" class="table-wrap">
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>Tournament</th>
+                    <th>Pos</th>
+                    <th>Score</th>
+                    <th>Rounds</th>
+                    <th>SG Tot</th>
+                    <th>SG OTT</th>
+                    <th>SG App</th>
+                    <th>SG Putt</th>
+                    <th>GIR%</th>
+                    <th>FIR%</th>
+                    <th>Putts</th>
+                    <th>&#x1F426; / &#x1F99B; / &#x1F4A5;</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="r : ${tournamentResults}">
+
+                    <!-- Tournament name + year -->
+                    <td>
+                        <div style="font-weight:600;" th:text="${r.tournamentName}"></div>
+                        <div style="font-size:0.72rem; color:var(--gray-600);" th:text="${r.seasonYear}"></div>
+                    </td>
+
+                    <!-- Position badge -->
+                    <td>
+                        <span class="pos-badge"
+                              th:classappend="${r.status == 'CUT' ? 'cut' : (r.status == 'WD' ? 'wd' : (r.position != null and r.position <= 10 ? 'top10' : ''))}"
+                              th:text="${r.positionDisplay}"></span>
+                    </td>
+
+                    <!-- Total score vs par -->
+                    <td th:classappend="${r.scoreDisplay.startsWith('-') ? 'score-under' : (r.scoreDisplay == 'E' ? 'score-even' : 'score-over')}"
+                        th:text="${r.scoreDisplay}"></td>
+
+                    <!-- Per-round scores vs par as coloured pills -->
+                    <td>
+                        <div class="round-scores" th:if="${r.roundScoresVsPar != null}">
+                            <span th:each="vp, i : ${r.roundScoresVsPar}"
+                                  class="round-pip"
+                                  th:classappend="${vp != null and vp < 0 ? 'under' : (vp != null and vp > 0 ? 'over' : 'even')}"
+                                  th:text="${T(com.hhgolf.golf_picks.dto.TournamentResult).roundVsParDisplay(vp)}"></span>
+                        </div>
+                        <!-- Fallback: raw scores if no par available -->
+                        <div class="round-scores" th:if="${r.roundScoresVsPar == null}">
+                            <span th:each="s : ${r.roundScores}" class="round-pip" th:text="${s}"></span>
+                        </div>
+                    </td>
+
+                    <td th:text="${T(com.hhgolf.golf_picks.dto.TournamentResult).fmt(r.avgSgTotal)}"></td>
+                    <td th:text="${T(com.hhgolf.golf_picks.dto.TournamentResult).fmt(r.avgSgOtt)}"></td>
+                    <td th:text="${T(com.hhgolf.golf_picks.dto.TournamentResult).fmt(r.avgSgApp)}"></td>
+                    <td th:text="${T(com.hhgolf.golf_picks.dto.TournamentResult).fmt(r.avgSgPutt)}"></td>
+                    <td th:text="${T(com.hhgolf.golf_picks.dto.TournamentResult).fmt(r.avgGir)}"></td>
+                    <td th:text="${T(com.hhgolf.golf_picks.dto.TournamentResult).fmt(r.avgFairwaysHit)}"></td>
+                    <td th:text="${T(com.hhgolf.golf_picks.dto.TournamentResult).fmt(r.avgPutts)}"></td>
+                    <td th:text="${r.totalBirdies} + ' / ' + ${r.totalBogeys} + ' / ' + ${r.totalDoubleBogeys}"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="empty-state" th:if="${#lists.isEmpty(tournamentResults)}">
+        No tournament data available for this player.
+    </div>
+</div>
+
+<!-- Tab: Form & Trend -->
+<div id="tab-trend" class="tab-panel">
+    <div th:if="${not #lists.isEmpty(tournamentResults)}">
+
+        <!-- Form Rating Banner -->
+        <div id="form-banner" style="
+            border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.5rem;
+            display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div>
+                <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7;">Current Form</div>
+                <div id="form-label" style="font-size: 1.6rem; font-weight: 700; line-height: 1.2;"></div>
+            </div>
+            <div style="flex: 1; min-width: 200px;">
+                <div style="font-size: 0.72rem; opacity: 0.7; margin-bottom: 0.25rem;">L3 avg SG Total vs L8 avg</div>
+                <div style="display: flex; gap: 1.5rem; font-size: 0.9rem;">
+                    <span>Last 3: <strong id="l3-avg"></strong></span>
+                    <span>Last 8: <strong id="l8-avg"></strong></span>
+                    <span>Δ: <strong id="sg-delta"></strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SG Total Sparkline Chart -->
+        <div class="panel" style="margin-bottom: 1rem;">
+            <div class="panel-header">
+                <h2>SG Total — Last 10 Tournaments</h2>
+                <span style="font-size: 0.75rem; color: var(--gray-600);">Strokes Gained vs field</span>
+            </div>
+            <div class="panel-body" style="padding-bottom: 0.5rem;">
+                <svg id="sg-chart" width="100%" height="140" style="display:block; overflow:visible;"></svg>
+                <div id="sg-x-labels" style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--gray-600); padding: 4px 0 0.75rem;"></div>
+            </div>
+        </div>
+
+        <!-- Score vs Par Trend Table -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Score vs Par — Recent Tournaments</h2>
+            </div>
+            <div class="panel-body" style="padding: 0;">
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Tournament</th>
+                            <th>Pos</th>
+                            <th>Score</th>
+                            <th>SG Tot</th>
+                            <th>SG OTT</th>
+                            <th>SG App</th>
+                            <th>SG Putt</th>
+                            <th>Momentum</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trend-table-body">
+                        <!-- populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+    <div class="empty-state" th:if="${#lists.isEmpty(tournamentResults)}">
+        No trend data available for this player.
+    </div>
+</div>
+
+<!-- Tab: Season Stats -->
+<div id="tab-stats" class="tab-panel">
+    <div class="stats-grid" th:if="${not #lists.isEmpty(seasonStats)}">
+        <div class="stat-card" th:each="stat : ${seasonStats}">
+            <div class="stat-title" th:text="${stat.statTitle ?: stat.statName}"></div>
+            <div class="stat-value" th:text="${stat.statValue}"></div>
+            <div class="stat-meta">
+                <span th:if="${stat.rank != null}"     th:text="'#' + ${stat.rank}"></span>
+                <span th:if="${stat.tourAvg != null}"  th:text="'avg ' + ${stat.tourAvg}"></span>
+            </div>
+        </div>
+    </div>
+    <div class="empty-state" th:if="${#lists.isEmpty(seasonStats)}">
+        No season stats available for this player.
+    </div>
+</div>
+
+<script th:inline="javascript">
+/*<![CDATA[*/
+
+// ── Tab switcher ─────────────────────────────────────────────────────────────
+function showTab(name, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+    if (name === 'trend') renderTrend();
+}
+
+// ── Tournament result data from server ───────────────────────────────────────
+const results = /*[[${tournamentResults}]]*/ [];
+
+// ── Trend rendering ──────────────────────────────────────────────────────────
+let trendRendered = false;
+function renderTrend() {
+    if (trendRendered || !results || results.length === 0) return;
+    trendRendered = true;
+
+    // Pull SG Total values (most recent last for left→right chart)
+    const recent = results.slice(0, 10).reverse();
+    const sgVals = recent.map(r => r.avgSgTotal != null ? parseFloat(r.avgSgTotal) : null);
+    const names  = recent.map(r => (r.tournamentName || '').split(' ').slice(0,3).join(' '));
+    const scores = recent.map(r => r.scoreDisplay || '-');
+    const positions = recent.map(r => r.positionDisplay || '-');
+
+    // ── Form rating (L3 vs L8, chronological order means most recent = end) ──
+    const allReversed = results.slice().reverse(); // oldest→newest
+    const sgAll = allReversed.map(r => r.avgSgTotal != null ? parseFloat(r.avgSgTotal) : null).filter(v => v != null);
+
+    function avg(arr) {
+        if (!arr.length) return null;
+        return arr.reduce((a,b) => a + b, 0) / arr.length;
+    }
+    const l3 = avg(sgAll.slice(-3));
+    const l8 = avg(sgAll.slice(-8));
+    const delta = (l3 != null && l8 != null) ? (l3 - l8) : null;
+
+    const banner = document.getElementById('form-banner');
+    const label  = document.getElementById('form-label');
+    document.getElementById('l3-avg').textContent = l3 != null ? l3.toFixed(2) : '-';
+    document.getElementById('l8-avg').textContent = l8 != null ? l8.toFixed(2) : '-';
+    document.getElementById('sg-delta').textContent = delta != null ? (delta >= 0 ? '+' : '') + delta.toFixed(2) : '-';
+
+    if (delta == null || Math.abs(delta) < 0.25) {
+        banner.style.background = '#F1EFE8'; banner.style.color = '#5F5E5A';
+        label.textContent = '➡ Steady';
+    } else if (delta > 0) {
+        banner.style.background = '#E1F5EE'; banner.style.color = '#0F6E56';
+        label.textContent = delta > 0.5 ? '🔥 Hot' : '↑ Warming Up';
+    } else {
+        banner.style.background = '#FCEBEB'; banner.style.color = '#A32D2D';
+        label.textContent = delta < -0.5 ? '❄ Cold' : '↓ Cooling Off';
+    }
+
+    // ── SVG Sparkline ────────────────────────────────────────────────────────
+    const svg = document.getElementById('sg-chart');
+    const validPairs = sgVals.map((v,i) => v != null ? {v, i} : null).filter(Boolean);
+    if (validPairs.length > 1) {
+        const W = svg.parentElement.clientWidth || 600;
+        const H = 130;
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+        const minV = Math.min(...validPairs.map(p => p.v));
+        const maxV = Math.max(...validPairs.map(p => p.v));
+        const range = Math.max(maxV - minV, 0.5);
+        const pad = { t: 16, b: 20, l: 36, r: 16 };
+
+        const xScale = i => pad.l + (i / (recent.length - 1)) * (W - pad.l - pad.r);
+        const yScale = v => pad.t + (1 - (v - minV) / range) * (H - pad.t - pad.b);
+
+        // Zero line (if in range)
+        if (minV <= 0 && maxV >= 0) {
+            const y0 = yScale(0);
+            const line0 = document.createElementNS('http://www.w3.org/2000/svg','line');
+            Object.assign(line0, {}); line0.setAttribute('x1', pad.l); line0.setAttribute('x2', W - pad.r);
+            line0.setAttribute('y1', y0); line0.setAttribute('y2', y0);
+            line0.setAttribute('stroke', '#B4B2A9'); line0.setAttribute('stroke-dasharray', '4 3');
+            line0.setAttribute('stroke-width', '1');
+            svg.appendChild(line0);
+
+            const txt0 = document.createElementNS('http://www.w3.org/2000/svg','text');
+            txt0.setAttribute('x', pad.l - 4); txt0.setAttribute('y', y0 + 4);
+            txt0.setAttribute('text-anchor','end'); txt0.setAttribute('font-size','9'); txt0.setAttribute('fill','#B4B2A9');
+            txt0.textContent = '0';
+            svg.appendChild(txt0);
+        }
+
+        // Area fill
+        const areaPoints = validPairs.map(p => `${xScale(p.i)},${yScale(p.v)}`).join(' ');
+        const first = validPairs[0], last2 = validPairs[validPairs.length - 1];
+        const area = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+        area.setAttribute('points',
+            `${xScale(first.i)},${H - pad.b} ${areaPoints} ${xScale(last2.i)},${H - pad.b}`);
+        area.setAttribute('fill', 'rgba(29,158,117,0.08)');
+        svg.appendChild(area);
+
+        // Line
+        const polyline = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+        polyline.setAttribute('points', areaPoints);
+        polyline.setAttribute('fill','none');
+        polyline.setAttribute('stroke','#1D9E75');
+        polyline.setAttribute('stroke-width','2.5');
+        polyline.setAttribute('stroke-linejoin','round');
+        polyline.setAttribute('stroke-linecap','round');
+        svg.appendChild(polyline);
+
+        // Dots + tooltips
+        validPairs.forEach(p => {
+            const cx = xScale(p.i), cy = yScale(p.v);
+            const isLast = p.i === last2.i;
+            const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+            dot.setAttribute('cx', cx); dot.setAttribute('cy', cy);
+            dot.setAttribute('r', isLast ? 5 : 4);
+            dot.setAttribute('fill', p.v >= 0 ? '#1D9E75' : '#A32D2D');
+            dot.setAttribute('stroke','#fff'); dot.setAttribute('stroke-width','2');
+            const tip = document.createElementNS('http://www.w3.org/2000/svg','title');
+            tip.textContent = `${names[p.i]}: ${p.v >= 0 ? '+' : ''}${p.v.toFixed(2)} SG`;
+            dot.appendChild(tip);
+            svg.appendChild(dot);
+
+            // Value label on last point
+            if (isLast) {
+                const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+                lbl.setAttribute('x', cx + 7); lbl.setAttribute('y', cy + 4);
+                lbl.setAttribute('font-size','10'); lbl.setAttribute('fill','#1D9E75'); lbl.setAttribute('font-weight','700');
+                lbl.textContent = (p.v >= 0 ? '+' : '') + p.v.toFixed(2);
+                svg.appendChild(lbl);
+            }
+        });
+    }
+
+    // X-axis labels
+    const labelsDiv = document.getElementById('sg-x-labels');
+    names.forEach(n => {
+        const s = document.createElement('span');
+        s.textContent = n;
+        s.style.maxWidth = `${100 / names.length}%`;
+        s.style.overflow = 'hidden'; s.style.textOverflow = 'ellipsis'; s.style.whiteSpace = 'nowrap';
+        s.style.textAlign = 'center';
+        labelsDiv.appendChild(s);
+    });
+
+    // ── Trend table ──────────────────────────────────────────────────────────
+    const tbody = document.getElementById('trend-table-body');
+    // Use most-recent-first order (results array, not reversed)
+    const tableData = results.slice(0, 8);
+    const sgForMomentum = tableData.map(r => r.avgSgTotal != null ? parseFloat(r.avgSgTotal) : null);
+
+    tableData.forEach((r, idx) => {
+        const tr = document.createElement('tr');
+        const sg = sgForMomentum[idx];
+        const prevSg = sgForMomentum[idx + 1];
+        let momentum = '—';
+        if (sg != null && prevSg != null) {
+            const diff = sg - prevSg;
+            if (diff > 0.2)       momentum = '<span style="color:#1D9E75;font-weight:700;">▲ Up</span>';
+            else if (diff < -0.2) momentum = '<span style="color:#A32D2D;font-weight:700;">▼ Down</span>';
+            else                  momentum = '<span style="color:#B4B2A9;">— Flat</span>';
+        }
+
+        const scoreClass = r.scoreDisplay && r.scoreDisplay.startsWith('-') ? 'score-under'
+                         : r.scoreDisplay === 'E' ? 'score-even' : 'score-over';
+
+        const posClass = r.status === 'CUT' ? 'pos-badge cut'
+                       : r.status === 'WD'  ? 'pos-badge wd'
+                       : (r.position != null && r.position <= 10) ? 'pos-badge top10' : 'pos-badge';
+
+        tr.innerHTML = `
+            <td>
+                <div style="font-weight:600;">${r.tournamentName || ''}</div>
+                <div style="font-size:0.72rem;color:var(--gray-600);">${r.seasonYear || ''}</div>
+            </td>
+            <td><span class="${posClass}">${r.positionDisplay || '-'}</span></td>
+            <td class="${scoreClass}">${r.scoreDisplay || '-'}</td>
+            <td>${sg != null ? (sg >= 0 ? '+' : '') + sg.toFixed(2) : '-'}</td>
+            <td>${r.avgSgOtt != null ? (parseFloat(r.avgSgOtt) >= 0 ? '+' : '') + parseFloat(r.avgSgOtt).toFixed(2) : '-'}</td>
+            <td>${r.avgSgApp != null ? (parseFloat(r.avgSgApp) >= 0 ? '+' : '') + parseFloat(r.avgSgApp).toFixed(2) : '-'}</td>
+            <td>${r.avgSgPutt != null ? (parseFloat(r.avgSgPutt) >= 0 ? '+' : '') + parseFloat(r.avgSgPutt).toFixed(2) : '-'}</td>
+            <td>${momentum}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+/*]]>*/
+</script>
+
+</th:block>
+</html>
