@@ -133,7 +133,10 @@
             <span class="nav-user"
                   th:if="${#authentication != null}"
                   th:text="${#authentication.name}"></span>
-            <a class="nav-logout" th:href="@{/logout}">Sign out</a>
+            <form th:action="@{/logout}" method="post" style="margin:0;">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <button type="submit" class="nav-logout" style="cursor:pointer; background:none;">Sign out</button>
+            </form>
         </div>
     </nav>
 
